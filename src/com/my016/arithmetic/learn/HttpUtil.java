@@ -21,13 +21,14 @@ import java.util.Set;
 public class HttpUtil {
 
     public static class Request {
-        private String url;
+        private final String url;
         private Param param;
         private Header header;
         private String body;
         private String method;
         private Proxy proxy;
         private Response response;
+        private boolean success = false;
         public Request(String url) {
             this.url = url;
             this.method = "GET";
@@ -127,13 +128,24 @@ public class HttpUtil {
             return proxy;
         }
 
+        public Response send() {
+            Response response = new Response();
+            response.setRequest(this);
+
+        }
+
+        public void setMethod(String method) {
+            this.method = method;
+        }
+
         public Response getResponse() {
             return response;
         }
 
-        private static class Response{
+        public static class Response{
             private Request request;
             private int code;
+            private Header header;
             private String body;
             private String message;
             private String contentType;
@@ -154,6 +166,190 @@ public class HttpUtil {
             private String acceptRanges;
             private String etag;
             private String lastModified;
+
+            public Request getRequest() {
+                return request;
+            }
+
+            public void setRequest(Request request) {
+                this.request = request;
+            }
+
+            public int getCode() {
+                return code;
+            }
+
+            public Header getHeader() {
+                return header;
+            }
+
+            public void setHeader(Header header) {
+                this.header = header;
+            }
+
+            public void setCode(int code) {
+                this.code = code;
+            }
+
+            public String getBody() {
+                return body;
+            }
+
+            public void setBody(String body) {
+                this.body = body;
+            }
+
+            public String getMessage() {
+                return message;
+            }
+
+            public void setMessage(String message) {
+                this.message = message;
+            }
+
+            public String getContentType() {
+                return contentType;
+            }
+
+            public void setContentType(String contentType) {
+                this.contentType = contentType;
+            }
+
+            public String getCharset() {
+                return charset;
+            }
+
+            public void setCharset(String charset) {
+                this.charset = charset;
+            }
+
+            public String getEncoding() {
+                return encoding;
+            }
+
+            public void setEncoding(String encoding) {
+                this.encoding = encoding;
+            }
+
+            public String getContentLength() {
+                return contentLength;
+            }
+
+            public void setContentLength(String contentLength) {
+                this.contentLength = contentLength;
+            }
+
+            public String getServer() {
+                return server;
+            }
+
+            public void setServer(String server) {
+                this.server = server;
+            }
+
+            public String getDate() {
+                return date;
+            }
+
+            public void setDate(String date) {
+                this.date = date;
+            }
+
+            public String getConnection() {
+                return connection;
+            }
+
+            public void setConnection(String connection) {
+                this.connection = connection;
+            }
+
+            public String getContentEncoding() {
+                return contentEncoding;
+            }
+
+            public void setContentEncoding(String contentEncoding) {
+                this.contentEncoding = contentEncoding;
+            }
+
+            public String getLocation() {
+                return location;
+            }
+
+            public void setLocation(String location) {
+                this.location = location;
+            }
+
+            public String getCookie() {
+                return cookie;
+            }
+
+            public void setCookie(String cookie) {
+                this.cookie = cookie;
+            }
+
+            public String getSetCookie() {
+                return setCookie;
+            }
+
+            public void setSetCookie(String setCookie) {
+                this.setCookie = setCookie;
+            }
+
+            public String getExpires() {
+                return expires;
+            }
+
+            public void setExpires(String expires) {
+                this.expires = expires;
+            }
+
+            public String getCacheControl() {
+                return cacheControl;
+            }
+
+            public void setCacheControl(String cacheControl) {
+                this.cacheControl = cacheControl;
+            }
+
+            public String getPragma() {
+                return pragma;
+            }
+
+            public void setPragma(String pragma) {
+                this.pragma = pragma;
+            }
+
+            public String getVary() {
+                return vary;
+            }
+
+            public void setVary(String vary) {
+                this.vary = vary;
+            }
+
+            public String getAcceptRanges() {
+                return acceptRanges;
+            }
+
+            public void setAcceptRanges(String acceptRanges) {
+                this.acceptRanges = acceptRanges;
+            }
+
+            public String getEtag() {
+                return etag;
+            }
+
+            public void setEtag(String etag) {
+                this.etag = etag;
+            }
+
+            public String getLastModified() {
+                return lastModified;
+            }
+
+            public void setLastModified(String lastModified) {
+                this.lastModified = lastModified;
+            }
         }
     }
 
@@ -664,6 +860,22 @@ public class HttpUtil {
         }
     }
 
+    private static Request.Response getResponse(HttpURLConnection connection) {
+        Request.Response response = new Request.Response();
+        try {
+            if (connection.getResponseCode() == 200){
+                response.setCode(connection.getResponseCode());
+                response.setBody(getString(connection.getInputStream()));
+                response.setHeader(new Header(connection.getHeaderFields()));
+            }else {
+                return connection.getErrorStream();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new HttpException("获取响应失败");
+        }
+    }
+
 
 
 
@@ -784,15 +996,23 @@ public class HttpUtil {
 
     public static class Header {
 
-        private static final Map<String, String> header = new HashMap<>();
+        private final Map<String, Object> header = new HashMap<>();
 
         private int size = 0;
 
-        public String getHeader(String key) {
+        public Header() {
+        }
+
+        public Header(Map<String, Object> header) {
+            this.header.putAll(header);
+            size = header.size();
+        }
+
+        public Object getHeader(String key) {
             return header.get(key);
         }
 
-        public Header setHeader(String key, String value) {
+        public Header setHeader(String key, Object value) {
             header.put(key, value);
             size++;
             return this;          //链式调用
@@ -820,12 +1040,12 @@ public class HttpUtil {
         return array == null || array.length == 0;
     }
 
-    private static List<String[]> getList(Map<String, String> param) {
+    private static List<String[]> getList(Map<String, Object> param) {
         Set<String> keySet = param.keySet();
         String[] k = keySet.toArray(new String[0]);
         String[] v = new String[k.length];
         for (int i = 0; i < k.length; i++) {
-            v[i] = param.get(k[i]);
+            v[i] = param.get(k[i]).toString();
         }
         List<String[]> r = new List<>();
         r.add(k).add(v);
