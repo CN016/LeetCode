@@ -17,7 +17,7 @@ public class PortScanner {
         for (int port = 1; port <= 65535; port++) {
             try {
                 if (threads.size() >= 5000 ){
-//                    port--;
+                    port--;
                     Thread.sleep(10);
                     continue;
                 }

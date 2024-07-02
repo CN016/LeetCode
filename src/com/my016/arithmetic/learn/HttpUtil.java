@@ -132,6 +132,8 @@ public class HttpUtil {
             Response response = new Response();
             response.setRequest(this);
 
+
+            return response;
         }
 
         public void setMethod(String method) {
@@ -866,7 +868,7 @@ public class HttpUtil {
             if (connection.getResponseCode() == 200){
                 response.setCode(connection.getResponseCode());
                 response.setBody(getString(connection.getInputStream()));
-                response.setHeader(new Header(connection.getHeaderFields()));
+                response.setHeader(new Header((Map<String, Object>) connection.getHeaderFields()));
             }else {
                 return connection.getErrorStream();
             }
